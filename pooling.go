@@ -5,9 +5,14 @@ import (
 	"time"
 )
 
-type Task interface {
-	Execute() error
+type taskTemplate interface {
+	Execute(interface{}) error
 	OnFailure(error)
+}
+
+type Task struct {
+	Exec       taskTemplate
+	Parameters interface{}
 }
 
 type Pool interface {
@@ -70,8 +75,8 @@ func (p *PoolSt) startWorkers() {
 						return
 					}
 
-					if err := task.Execute(); err != nil {
-						task.OnFailure(err)
+					if err := task.Exec.Execute(task.Parameters); err != nil {
+						task.Exec.OnFailure(err)
 					}
 				}
 			}

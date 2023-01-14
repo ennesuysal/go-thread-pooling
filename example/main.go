@@ -10,12 +10,12 @@ import (
 
 var share int
 
-func (t *Task) Execute() error {
+func (t *Task) Execute(i interface{}) error {
 	if t.mutex != nil {
 		t.mutex.Lock()
 		defer t.mutex.Unlock()
 	}
-	return t.executeFunc()
+	return t.executeFunc(i)
 }
 
 func (t *Task) OnFailure(e error) {
@@ -23,14 +23,17 @@ func (t *Task) OnFailure(e error) {
 }
 
 type Task struct {
-	executeFunc func() error
+	executeFunc func(interface{}) error
 	mutex       *sync.Mutex
 }
 
-func newTask(executeFunc func() error, m *sync.Mutex) *Task {
-	return &Task{
-		executeFunc: executeFunc,
-		mutex:       m,
+func newTask(executeFunc func(interface{}) error, m *sync.Mutex, parameters interface{}) pool.Task {
+	return pool.Task{
+		Exec: &Task{
+			executeFunc: executeFunc,
+			mutex:       m,
+		},
+		Parameters: parameters,
 	}
 }
 
@@ -42,10 +45,11 @@ func main() {
 	p.Start()
 
 	for i := 0; i < 1000; i++ {
-		p.AddWork(newTask(func() error {
+		p.AddWork(newTask(func(param interface{}) error {
 			share += 1
+			fmt.Printf("%d. Job\n", param)
 			return nil
-		}, &m))
+		}, &m, i))
 	}
 
 	p.Stop()
